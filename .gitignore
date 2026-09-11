@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+*.npz
+*.tif
+*.tiff
+*.tiff.gz
+*.h5
+*.HEIC

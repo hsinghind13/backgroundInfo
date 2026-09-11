@@ -1,0 +1,40 @@
+# ERNI analysis stack -- pinned to the versions verified working 2026-08-17.
+# Do not float these casually; the notes below are load-bearing.
+
+# --- core physics ---------------------------------------------------------
+ncrystal==4.4.6
+
+# --- numerics -------------------------------------------------------------
+# numpy MUST stay <2. numpy 2 breaks the pandas build in this stack.
+numpy==1.26.4
+scipy==1.13.1
+pandas==2.2.2
+lmfit==1.3.4
+
+# --- imaging / IO ---------------------------------------------------------
+tifffile==2023.4.12
+# roifile MUST stay <2025 -- the 2025 releases changed the ROI record layout
+# and save_roi's reader silently returns empty ROIs instead of erroring.
+roifile==2024.9.15
+
+# --- crystallography ------------------------------------------------------
+spglib==2.7.0
+gemmi==0.7.5
+ase==3.27.0
+
+# --- plotting / notebooks -------------------------------------------------
+matplotlib==3.10.8
+plotly==5.24.1
+# ipywidgets 8.x required by JupyterLab 4.x; 7.x will render dead widgets.
+ipywidgets==8.1.8
+jupyterlab==4.2.5
+notebook==7.2.2
+
+# --- optional: ENDF / notebook utilities ----------------------------------
+# Only needed for the ncrystal2_advanced_05 and ND2025 notebooks.
+endf-parserpy==0.17.0
+ncrystal-notebook-utilities==0.0.2
+
+# --- NOT on PyPI: installed from the git checkouts by bootstrap_macos.sh ---
+#   nbragg    1.0.0   from repos/nbragg     @ ecaf764  (branch: master, NOT main)
+#   save-roi  0.2.0   from repos/save_roi   @ abf97d4
