@@ -1,4 +1,4 @@
-NCMAT v2
+NCMAT v7
 #
 # delta-YH2, fluorite structure (SG-225), a = 5.203 A, 8xH + 4xY per cell.
 #
@@ -19,6 +19,21 @@ NCMAT v2
 #
 #       293.6K 400.0K 500.0K 600.0K 700.0K 1000.0K 1200.0K
 #       1400.0K 1600.0K
+#
+#
+# If the load fails with a missing-Debye-temperature error, uncomment the block
+# below. NCMAT v1-v3 require @DEBYETEMPERATURE for crystalline materials; v4+
+# makes it optional for elements carrying detailed @DYNINFO, but the spec only
+# documents that for type vdos, not for scatknl. The values here are NOT sourced
+# -- they are the guesses carried in delta-YH2_SKELETON.ncmat. They affect the
+# Debye-Waller factor, i.e. Bragg edge intensities; they do not affect the
+# inelastic cross section, which comes entirely from the scatknl above.
+# Replace with values derived from the evaluation's phonon DOS before quoting
+# anything that depends on edge intensities.
+#
+#@DEBYETEMPERATURE
+#  H   1500
+#  Y   250
 #
 @CELL
   lengths 5.203 5.203 5.203

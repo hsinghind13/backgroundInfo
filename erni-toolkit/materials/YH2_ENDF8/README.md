@@ -38,6 +38,37 @@ rather than the newer `cubic` shorthand, so the files load on older NCrystal.
 Upstream places these under `data/unvalidated/`. **They are not validated, and
 neither is the graft.**
 
+
+## Known problem — fixed once, still unverified
+
+The first version of these files carried the upstream `NCMAT v2` header. That is
+invalid: **NCMAT v1–v3 require `@DEBYETEMPERATURE` for crystalline materials**, and
+grafting `@CELL`/`@SPACEGROUP`/`@ATOMPOSITIONS` onto the file made it crystalline.
+The upstream file avoided the requirement by using `@DENSITY` instead, which is
+the non-crystalline path.
+
+The header is now `NCMAT v7`, where `@DEBYETEMPERATURE` is optional for elements
+that carry detailed `@DYNINFO`. **Whether `scatknl` counts as "detailed" for this
+purpose is not documented** — the spec states the rule for `type vdos` and is
+silent on `scatknl`. NCrystal needs a mean-squared displacement to compute Bragg
+edge intensities, and a tabulated S(α,β) does not obviously expose one.
+
+So there are two possible outcomes when you load these:
+
+| outcome | meaning | action |
+|---|---|---|
+| loads, Bragg edges present | v7 derived the MSD from the kernel | proceed to the three checks |
+| loads, no Bragg edges | elastic part silently absent | needs `@DEBYETEMPERATURE` |
+| fails with a Debye/MSD error | v7 did not help | needs `@DEBYETEMPERATURE` |
+
+Each file carries a commented-out `@DEBYETEMPERATURE` block for the second and
+third cases. **Its values are not sourced** — they are the guesses from
+`delta-YH2_SKELETON.ncmat` (H 1500 K, Y 250 K). They affect the Debye-Waller
+factor, so Bragg edge intensities; they do not affect the inelastic cross
+section, which comes entirely from the scatknl. Replace them with values derived
+from the evaluation's phonon DOS before quoting anything that depends on edge
+intensities.
+
 ## Verify before trusting
 
 None of this was executed — NCrystal could not be run on the machine where these
