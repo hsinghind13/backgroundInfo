@@ -39,35 +39,69 @@ Upstream places these under `data/unvalidated/`. **They are not validated, and
 neither is the graft.**
 
 
-## Known problem — fixed once, still unverified
+## Elastic component — now sourced, not guessed
 
-The first version of these files carried the upstream `NCMAT v2` header. That is
-invalid: **NCMAT v1–v3 require `@DEBYETEMPERATURE` for crystalline materials**, and
-grafting `@CELL`/`@SPACEGROUP`/`@ATOMPOSITIONS` onto the file made it crystalline.
-The upstream file avoided the requirement by using `@DENSITY` instead, which is
-the non-crystalline path.
+The upstream `inelasticonly` files carry no elastic scattering at all. Two
+things were needed to restore it, and both are now in place.
 
-The header is now `NCMAT v7`, where `@DEBYETEMPERATURE` is optional for elements
-that carry detailed `@DYNINFO`. **Whether `scatknl` counts as "detailed" for this
-purpose is not documented** — the spec states the rule for `type vdos` and is
-silent on `scatknl`. NCrystal needs a mean-squared displacement to compute Bragg
-edge intensities, and a tabulated S(α,β) does not obviously expose one.
+**Crystal structure**, grafted from `../delta-YH2_SKELETON.ncmat` — fluorite,
+SG-225, a = 5.203 Å. This is what NCrystal computes Bragg scattering from.
 
-So there are two possible outcomes when you load these:
+**A mean-squared displacement**, which NCrystal needs for the Debye-Waller
+factor. Without it there are no edge intensities, and NCMAT v1–v3 would reject a
+crystalline file outright. This was taken from the **same ENDF evaluations**, in
+`MF7/MT2`, which the ncrystal-extra conversion discarded along with the rest of
+the elastic section:
 
-| outcome | meaning | action |
-|---|---|---|
-| loads, Bragg edges present | v7 derived the MSD from the kernel | proceed to the three checks |
-| loads, no Bragg edges | elastic part silently absent | needs `@DEBYETEMPERATURE` |
-| fails with a Debye/MSD error | v7 did not help | needs `@DEBYETEMPERATURE` |
+- `tsl_H(YH2)` MAT 5, LTHR=2 — incoherent elastic, σ_b = 80.054 b, with the
+  Debye-Waller integral W′(T) tabulated at all ten temperatures
+- `tsl_Y(YH2)` MAT 55, LTHR=3 — mixed elastic: 674 tabulated coherent elastic
+  structure factors *plus* σ_b = 0.15 b and its own W′(T)
 
-Each file carries a commented-out `@DEBYETEMPERATURE` block for the second and
-third cases. **Its values are not sourced** — they are the guesses from
-`delta-YH2_SKELETON.ncmat` (H 1500 K, Y 250 K). They affect the Debye-Waller
-factor, so Bragg edge intensities; they do not affect the inelastic cross
-section, which comes entirely from the scatknl. Replace them with values derived
-from the evaluation's phonon DOS before quoting anything that depends on edge
-intensities.
+Conversion, per file:
+
+```
+msd   = W' * hbar^2/2m          hbar^2/2m = 2.0721e-3 eV*A^2
+Theta = NCrystal.debyeTempFromIsotropicMSD(msd=msd, temperature=T, mass=m)
+```
+
+| T [K] | W′(H) | Θ(H) [K] | W′(Y) | Θ(Y) [K] |
+|---|---|---|---|---|
+| 293.6 | 9.2750 | 2115.5 | 2.4971 | 309.4 |
+| 400 | 10.0038 | 2135.9 | 3.3558 | 309.4 |
+| 500 | 10.8830 | 2146.9 | 4.1703 | 309.4 |
+| 600 | 11.9059 | 2152.8 | 4.9884 | 309.4 |
+| 700 | 13.0332 | 2156.0 | 5.8085 | 309.4 |
+| 800 | 14.2362 | 2157.8 | 6.6299 | 309.4 |
+| 1000 | 16.7950 | 2159.5 | 8.2751 | 309.4 |
+| 1200 | 19.4837 | 2160.2 | 9.9220 | 309.4 |
+| 1400 | 22.2517 | 2160.5 | 11.5701 | 309.4 |
+| 1600 | 25.0714 | 2160.7 | 13.2187 | 309.4 |
+
+### Three checks that the conversion is right
+
+1. **Θ(Y) is 309.4 K at every one of the ten temperatures**, constant to four
+   figures. The yttrium sublattice is genuinely Debye-like, which is what makes
+   this a real test rather than a tautology.
+2. **Yttrium metal's literature Debye temperature is ~280 K.** 309 K in the
+   stiffer hydride is the right neighbourhood.
+3. **Θ(H) drifts only 2%** (2115 → 2161 K) and converges at high T — the
+   expected signature of hydrogen being Einstein-like, not Debye-like.
+
+The msd convention was separately checked against NCrystal's own
+`debyeIsotropicMSD` for Al and Cu, reproducing their literature B_iso
+(Al: 0.80 Å² computed vs ~0.77 literature; Cu: 0.0071 Å² vs ~0.0075).
+
+For contrast, the skeleton guessed **H 1500 K** and **Y 250 K**. The H guess
+gives msd = 0.030 Å² against the evaluated 0.019 — 56% too large, which would
+badly over-suppress the Bragg edges.
+
+### The reference answer for validation
+
+The Y file's 674-point coherent-elastic table **is the evaluation's own Bragg
+cross section**. Compare NCrystal's computed edges against it. If positions and
+intensities match, the structure graft and the lattice constant are both
+confirmed. That is the strongest check available, and it needs no new data.
 
 ## Verify before trusting
 
